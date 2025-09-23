@@ -9,7 +9,7 @@ This folder contains the interactive **Power BI dashboard** for the IBM Employee
   👉 [Click here to view on Power BI Service](https://app.powerbi.com/groups/me/reports/888a3761-6d11-4097-a4a3-5aebb942924d/05fe1b77c88a29708e6d?experience=power-bi)  
 
 - **Option 2**: Download and open in Power BI Desktop  
-  - File: `IBM_Attrition_Dashboard.pbix`  
+  - File: `IBM Attrition Analytics pbix`  (Click the link provided in the Dashboard folder)
   - Requirements: [Power BI Desktop](https://powerbi.microsoft.com/desktop/) (free to install)
 
 ---
