@@ -17,7 +17,8 @@ This folder contains the interactive **Power BI dashboard** for the IBM Employee
 ## 📸 Preview
 Below is a screenshot of the main dashboard page:  
 
-![Dashboard Overview](<img width="1321" height="744" alt="Screenshot 2025-09-22 182932" src="https://github.com/user-attachments/assets/1a0d6024-124b-4854-905e-cdb2623e6175" />
+![Dashboard Overview](<img width="1321" height="743" alt="image" src="https://github.com/user-attachments/assets/13b82b0b-dbf0-45ef-9d1c-6a5598127e1d" />
+
 )  
 
 Additional views:  
