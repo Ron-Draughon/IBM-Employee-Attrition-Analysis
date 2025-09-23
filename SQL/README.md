@@ -13,7 +13,7 @@ The queries were written in **SQL Server** and designed to calculate attrition c
   Each query follows a general structure:  
   - `COUNT(*)` → total employees  
   - `SUM(CASE WHEN Attrition = 'Yes' …)` → employees who left  
-  - Attrition rate = `left ÷ total employees`  
+  - Attrition rate = `ROUND(100.0 * SUM(CASE WHEN Attrition = 'Yes' THEN 1 ELSE 0 END) / COUNT(*), 2)`  
 
 - **Included examples**  
   To avoid redundancy, representative queries are included that demonstrate:  
