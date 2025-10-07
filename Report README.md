@@ -20,6 +20,4 @@ The report includes:
 ---
 
 ## 🔗 Direct Access
-👉 [Click here to open the PDF report]( [IBM Employee Attrition Report.pdf](https://github.com/user-attachments/files/22752949/IBM.Employee.Attrition.Report.pdf))
-) 
-
+👉 [Click here to view the report in your browser][IBM Employee Attrition Report.pdf](https://github.com/user-attachments/files/22753253/IBM.Employee.Attrition.Report.pdf)
