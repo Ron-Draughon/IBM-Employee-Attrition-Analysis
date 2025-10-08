@@ -21,3 +21,4 @@ The report includes:
 
 ## 🔗 Direct Access
 👉 [Click here to view the report in your browser][IBM Employee Attrition Report.pdf](https://github.com/Ron-Draughon/IBM-Employee-Attrition-Analysis/blob/main/Report/IBM%20Employee%20Attrition%20Report.pdf)
+👉 [View the report (with active hyperlinks)] https://drive.google.com/file/d/1PNRpTs9WFGL7YzF0j3_FImtwzu9291W7/view?usp=drive_link
