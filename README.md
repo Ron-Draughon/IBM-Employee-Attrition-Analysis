@@ -12,7 +12,7 @@ Analysis of employee attrition using **SQL** and **Power BI**. This project expl
 ---
 
 ## 📂 Project Contents  
-- 📄 [**Report (PDF)**](https://github.com/user-attachments/files/22482224/IBM.Employee.Attrition.Report.pdf) – Complete analysis with visuals, insights, and recommendations.   
+- 📄 [**Report (PDF)**](https://drive.google.com/file/d/1PNRpTs9WFGL7YzF0j3_FImtwzu9291W7/view?usp=drive_link) – Complete analysis with visuals, insights, and recommendations.   
 - 📊 [**Dashboard**](https://github.com/Ron-Draughon/IBM-Employee-Attrition-Analysis/blob/main/Dashboard/README.md) – Key Power BI visuals highlighting attrition drivers.  
 - 💻 [**SQL Queries**](https://github.com/Ron-Draughon/IBM-Employee-Attrition-Analysis/tree/main/SQL) – Curated queries used to extract, group, and calculate attrition metrics.  
 
