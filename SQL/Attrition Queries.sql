@@ -160,3 +160,55 @@ GROUP BY CASE
          ELSE 'Other'
        END
 ORDER BY attrition_rate DESC;
+
+---------------------------------------------------------
+-- 8. Calculate the true percentage of overlap between
+-- high-risk attrition groups (e.g., overtime, low pay, early tenure, etc.)
+---------------------------------------------------------
+
+-- Flag each high-risk attribute for every employee
+-- Each column creates a binary flag (1 = in risk group, 0 = not)
+WITH HighRiskFlags AS (
+    SELECT 
+        EmployeeNumber,
+        CASE WHEN OverTime = 'Yes' THEN 1 ELSE 0 END AS is_overtime,
+        CASE WHEN YearsAtCompany <= 1 THEN 1 ELSE 0 END AS is_early_tenure,
+        CASE WHEN MonthlyIncome < 2000 THEN 1 ELSE 0 END AS is_low_income,
+        CASE WHEN JobInvolvement = 1 THEN 1 ELSE 0 END AS is_low_involvement,
+        CASE WHEN WorkLifeBalance = 1 THEN 1 ELSE 0 END AS is_poor_wlb,
+        CASE WHEN JobRole = 'Sales Representative' THEN 1 ELSE 0 END AS is_sales_rep,
+        CASE WHEN BusinessTravel = 'Travel_Frequently' THEN 1 ELSE 0 END AS is_frequent_travel
+    FROM HR_Employees
+),
+
+-- Counts how many high-risk flags each employee has
+-- Adds up all 1s for each employee to see how many risk segments they belong to
+RiskCounts AS (
+    SELECT 
+        EmployeeNumber,
+        (is_overtime + is_early_tenure + is_low_income + 
+         is_low_involvement + is_poor_wlb + is_sales_rep + 
+         is_frequent_travel) AS risk_count
+    FROM HighRiskFlags
+),
+
+-- Aggregates totals across the dataset
+-- total_employees = all employees in dataset
+-- at_risk_employees = employees with ≥1 high-risk factor
+-- overlap_employees = employees in ≥2 risk groups (overlapping)
+Totals AS (
+    SELECT 
+        COUNT(*) AS total_employees,
+        SUM(CASE WHEN risk_count >= 1 THEN 1 ELSE 0 END) AS at_risk_employees,
+        SUM(CASE WHEN risk_count >= 2 THEN 1 ELSE 0 END) AS overlap_employees
+    FROM RiskCounts
+)
+
+-- Outputs the overlap percentage
+-- overlap_rate_percent = percentage of at-risk employees that are in 2+ risk categories
+SELECT 
+    total_employees,
+    at_risk_employees,
+    overlap_employees,
+    ROUND(100.0 * overlap_employees / at_risk_employees, 2) AS overlap_rate_percent
+FROM Totals;
