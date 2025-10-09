@@ -212,3 +212,300 @@ SELECT
     overlap_employees,
     ROUND(100.0 * overlap_employees / at_risk_employees, 2) AS overlap_rate_percent
 FROM Totals;
+
+---------------------------------------------------------
+-- 9 Create the Impact Summary View for the table
+-- Calculates attrition metrics, applies the **half-gap method**, and estimates avoided leavers and savings.
+---------------------------------------------------------
+
+CREATE VIEW Impact_Summary_View AS
+
+WITH CompanyAvg AS (
+    -- Overall company attrition rate (dynamic)
+    SELECT CAST(AVG(CASE WHEN Attrition = 'Yes' THEN 1.0 ELSE 0 END) AS DECIMAL(6,4)) AS company_attrition
+    FROM HR_Employees
+)
+
+-- 1) Overtime
+SELECT 
+    'Overtime' AS Dimension,
+    OverTime AS Segment,
+    CASE WHEN OverTime = 'Yes' THEN 1 ELSE 2 END AS SegmentOrder,
+    COUNT(*) AS headcount,
+    CAST(ROUND(SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*),4) AS DECIMAL(6,4)) AS current_attrition,
+    -- Half-gap: midpoint between current and company average (only if current > company average)
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition 
+             THEN company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2
+             ELSE SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) END
+    ,4) AS DECIMAL(6,4)) AS target_attrition,
+    -- Avoided leavers from the rate reduction
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition 
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  )
+             ELSE 0 END
+    ,0) AS INT) AS avoided_leavers,
+    -- Use segment-level average salary (monthly -> annual)
+    CAST(ROUND(AVG(MonthlyIncome)*12,2) AS DECIMAL(10,2)) AS avg_annual_salary,
+    -- Savings = avoided_leavers * (0.5 * annual salary)
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition 
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  ) * (AVG(MonthlyIncome)*12*0.5)
+             ELSE 0 END
+    ,0) AS BIGINT) AS savings
+FROM HR_Employees
+CROSS JOIN CompanyAvg
+GROUP BY OverTime, company_attrition, company_attrition  -- keep company_attrition in GROUP BY
+HAVING SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) >= 1.5 * company_attrition
+
+UNION ALL
+
+-- 2) Monthly Income
+SELECT 
+    'Monthly Income' AS Dimension,
+    IncomeGroup AS Segment,
+    SegmentOrder,
+    COUNT(*) AS headcount,
+    CAST(ROUND(SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*),4) AS DECIMAL(6,4)) AS current_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition 
+             THEN company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2
+             ELSE SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) END
+    ,4) AS DECIMAL(6,4)) AS target_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition 
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  )
+             ELSE 0 END
+    ,0) AS INT) AS avoided_leavers,
+    CAST(ROUND(AVG(MonthlyIncome)*12,2) AS DECIMAL(10,2)) AS avg_annual_salary,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition 
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  ) * (AVG(MonthlyIncome)*12*0.5)
+             ELSE 0 END
+    ,0) AS BIGINT) AS savings
+FROM (
+    -- Define income bands & an order column for display
+    SELECT *,
+        CASE WHEN MonthlyIncome < 2000 THEN '<$2k'
+             WHEN MonthlyIncome BETWEEN 2000 AND 2999 THEN '$2k-$2.9k'
+             WHEN MonthlyIncome BETWEEN 3000 AND 5999 THEN '$3k-$5.9k'
+             WHEN MonthlyIncome BETWEEN 6000 AND 8999 THEN '$6k-$8.9k'
+             WHEN MonthlyIncome BETWEEN 9000 AND 11999 THEN '$9k-$11.9k'
+             WHEN MonthlyIncome BETWEEN 12000 AND 14999 THEN '$12k-$14.9k'
+             ELSE '>$15k' END AS IncomeGroup,
+        CASE WHEN MonthlyIncome < 2000 THEN 1
+             WHEN MonthlyIncome BETWEEN 2000 AND 2999 THEN 2
+             WHEN MonthlyIncome BETWEEN 3000 AND 5999 THEN 3
+             WHEN MonthlyIncome BETWEEN 6000 AND 8999 THEN 4
+             WHEN MonthlyIncome BETWEEN 9000 AND 11999 THEN 5
+             WHEN MonthlyIncome BETWEEN 12000 AND 14999 THEN 6
+             ELSE 7 END AS SegmentOrder
+    FROM HR_Employees
+) e
+CROSS JOIN CompanyAvg
+GROUP BY IncomeGroup, SegmentOrder, company_attrition
+HAVING SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) >= 1.5 * company_attrition
+
+UNION ALL
+
+-- 3) Tenure
+SELECT 
+    'Tenure' AS Dimension,
+    TenureGroup AS Segment,
+    SegmentOrder,
+    COUNT(*) AS headcount,
+    CAST(ROUND(SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*),4) AS DECIMAL(6,4)) AS current_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2
+             ELSE SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) END
+    ,4) AS DECIMAL(6,4)) AS target_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  )
+             ELSE 0 END
+    ,0) AS INT) AS avoided_leavers,
+    CAST(ROUND(AVG(MonthlyIncome)*12,2) AS DECIMAL(10,2)) AS avg_annual_salary,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  ) * (AVG(MonthlyIncome)*12*0.5)
+             ELSE 0 END
+    ,0) AS BIGINT) AS savings
+FROM (
+    -- Bucket years at company & set display order
+    SELECT *,
+        CASE WHEN YearsAtCompany BETWEEN 0 AND 1 THEN '0-1 years'
+             WHEN YearsAtCompany BETWEEN 2 AND 5 THEN '2-5 years'
+             WHEN YearsAtCompany BETWEEN 6 AND 10 THEN '6-10 years'
+             ELSE '10+ years' END AS TenureGroup,
+        CASE WHEN YearsAtCompany BETWEEN 0 AND 1 THEN 1
+             WHEN YearsAtCompany BETWEEN 2 AND 5 THEN 2
+             WHEN YearsAtCompany BETWEEN 6 AND 10 THEN 3
+             ELSE 4 END AS SegmentOrder
+    FROM HR_Employees
+) e
+CROSS JOIN CompanyAvg
+GROUP BY TenureGroup, SegmentOrder, company_attrition
+HAVING SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) >= 1.5 * company_attrition
+
+UNION ALL
+
+-- 4) Job Involvement
+SELECT 
+    'Job Involvement' AS Dimension,
+    CAST(JobInvolvement AS VARCHAR(10)) AS Segment,
+    JobInvolvement AS SegmentOrder,
+    COUNT(*) AS headcount,
+    CAST(ROUND(SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*),4) AS DECIMAL(6,4)) AS current_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2
+             ELSE SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) END
+    ,4) AS DECIMAL(6,4)) AS target_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  )
+             ELSE 0 END
+    ,0) AS INT) AS avoided_leavers,
+    CAST(ROUND(AVG(MonthlyIncome)*12,2) AS DECIMAL(10,2)) AS avg_annual_salary,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  ) * (AVG(MonthlyIncome)*12*0.5)
+             ELSE 0 END
+    ,0) AS BIGINT) AS savings
+FROM HR_Employees
+CROSS JOIN CompanyAvg
+GROUP BY JobInvolvement, company_attrition
+HAVING SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) >= 1.5 * company_attrition
+
+UNION ALL
+
+-- 5) Work-Life Balance
+SELECT 
+    'Work-Life Balance' AS Dimension,
+    CAST(WorkLifeBalance AS VARCHAR(10)) AS Segment,
+    WorkLifeBalance AS SegmentOrder,
+    COUNT(*) AS headcount,
+    CAST(ROUND(SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*),4) AS DECIMAL(6,4)) AS current_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2
+             ELSE SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) END
+    ,4) AS DECIMAL(6,4)) AS target_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  )
+             ELSE 0 END
+    ,0) AS INT) AS avoided_leavers,
+    CAST(ROUND(AVG(MonthlyIncome)*12,2) AS DECIMAL(10,2)) AS avg_annual_salary,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  ) * (AVG(MonthlyIncome)*12*0.5)
+             ELSE 0 END
+    ,0) AS BIGINT) AS savings
+FROM HR_Employees
+CROSS JOIN CompanyAvg
+GROUP BY WorkLifeBalance, company_attrition
+HAVING SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) >= 1.5 * company_attrition
+
+UNION ALL
+
+-- 6) Job Role
+SELECT 
+    'Job Role' AS Dimension,
+    JobRole AS Segment,
+    DENSE_RANK() OVER (ORDER BY JobRole) AS SegmentOrder,
+    COUNT(*) AS headcount,
+    CAST(ROUND(SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*),4) AS DECIMAL(6,4)) AS current_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2
+             ELSE SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) END
+    ,4) AS DECIMAL(6,4)) AS target_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  )
+             ELSE 0 END
+    ,0) AS INT) AS avoided_leavers,
+    CAST(ROUND(AVG(MonthlyIncome)*12,2) AS DECIMAL(10,2)) AS avg_annual_salary,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  ) * (AVG(MonthlyIncome)*12*0.5)
+             ELSE 0 END
+    ,0) AS BIGINT) AS savings
+FROM HR_Employees
+CROSS JOIN CompanyAvg
+GROUP BY JobRole, company_attrition
+HAVING SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) >= 1.5 * company_attrition
+
+UNION ALL
+
+-- 7) Business Travel
+SELECT 
+    'Business Travel' AS Dimension,
+    BusinessTravel AS Segment,
+    DENSE_RANK() OVER (ORDER BY BusinessTravel) AS SegmentOrder,
+    COUNT(*) AS headcount,
+    CAST(ROUND(SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*),4) AS DECIMAL(6,4)) AS current_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2
+             ELSE SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) END
+    ,4) AS DECIMAL(6,4)) AS target_attrition,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  )
+             ELSE 0 END
+    ,0) AS INT) AS avoided_leavers,
+    CAST(ROUND(AVG(MonthlyIncome)*12,2) AS DECIMAL(10,2)) AS avg_annual_salary,
+    CAST(ROUND(
+        CASE WHEN SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) > company_attrition
+             THEN COUNT(*) * (
+                    (SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*))
+                  - (company_attrition + ((SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*)) - company_attrition)/2)
+                  ) * (AVG(MonthlyIncome)*12*0.5)
+             ELSE 0 END
+    ,0) AS BIGINT) AS savings
+FROM HR_Employees
+CROSS JOIN CompanyAvg
+GROUP BY BusinessTravel, company_attrition
+HAVING SUM(CASE WHEN Attrition='Yes' THEN 1 ELSE 0 END)*1.0/COUNT(*) >= 1.5 * company_attrition;
