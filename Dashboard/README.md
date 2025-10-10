@@ -1,33 +1,29 @@
 # 📊 Power BI Dashboard – IBM Employee Attrition Analysis
 
-This folder contains the interactive **Power BI dashboard** for the IBM Employee Attrition project. The dashboard highlights key drivers of employee attrition and allows exploration by age, income, tenure, job role, business travel, and more.  
+This interactive **Power BI dashboard** visualizes the key drivers of employee attrition across 1,470 employees.  
+It connects insights from the IBM HR Analytics dataset to reveal how compensation, overtime, tenure, engagement, and travel patterns affect turnover risk.
 
 ---
 
-## 🔍 How to View the Dashboard
-- **Option 1 (Recommended)**: View the interactive dashboard online  
-  👉 [Click here to view on Power BI Service](https://app.powerbi.com/groups/me/reports/888a3761-6d11-4097-a4a3-5aebb942924d/05fe1b77c88a29708e6d?experience=power-bi)  
-
-- **Option 2**: Download and open in Power BI Desktop  
-  - File: `IBM Attrition Analytics pbix`  (Click the link provided in the Dashboard folder)
-  - Requirements: [Power BI Desktop](https://powerbi.microsoft.com/desktop/) (free to install)
+## 🔍 View the Dashboard
+👉 [![View Dashboard](https://img.shields.io/badge/View%20Dashboard-Power%20BI-yellow?logo=power-bi&logoColor=white)](https://app.powerbi.com/view?r=eyJrIjoiOGIzOTkxMjMtNmM1Zi00ZjcwLTlmNDktODc3YmEyZmY1YmI2IiwidCI6ImMzYzQ3Yjc3LTNmNmYtNDA4NS04OGRmLTFjMjZlMDkzZGMzOSIsImMiOjZ9)
 
 ---
 
-## 📸 Preview
-<img width="1321" height="743" alt="image" src="https://github.com/user-attachments/assets/13b82b0b-dbf0-45ef-9d1c-6a5598127e1d" />
-
-
-Additional views:  
-- Overtime Analysis  
-- Attrition by Age Groups  
-- Attrition by Business Travel  
-- Job Role Heatmap  
+## 📸 Dashboard Preview
+<img width="1321" height="743" alt="IBM Attrition Dashboard Overview" src="https://github.com/user-attachments/assets/13b82b0b-dbf0-45ef-9d1c-6a5598127e1d" />
 
 ---
 
 ## ✨ Key Features
-- **Filters** to drill down by department, overtime status, and .  
-- **Heatmaps** highlight high-risk combinations (e.g., Sales Reps who travel frequently).  
-- **KPI Cards** show overall attrition rate and total employees at a glance.  
-- **Interactive visuals** to explore attrition by compensation, tenure, and engagement.  
+- **Interactive Filters** — explore attrition by department, tenure, overtime, and monthly income  
+- **KPI Cards** — display overall attrition rate, total employees, and average monthly income  
+- **Heatmaps** — highlight high-risk combinations (e.g., *Sales Representatives who travel frequently*)  
+- **Trend & Comparison Visuals** — compare attrition rates across roles, pay bands, and work-life balance  
+- **Clean Design** — optimized for executive summaries and hiring manager readability  
+
+---
+
+## 🧠 Analytical Context
+This dashboard complements the **IBM Employee Attrition Analysis Report (PDF)** by providing a visual layer to the SQL-driven insights.  
+It supports data-driven HR decision-making by allowing users to interactively identify which segments drive turnover risk and model targeted interventions.
