@@ -10,12 +10,18 @@ This folder contains the **final written report** for the IBM Employee Attrition
 
 ---
 
-## 📝 Report Overview
-The report includes:  
-- **Executive Summary** outlining the business problem and key results.  
-- **Key Findings** (Overtime, Age, Monthly Income, Tenure, Job Role, Business Travel, etc.).  
-- **Recommendations** to improve retention.  
-- **Conclusion** summarizing business impact.  
+## 📝 Report Overview  
+This report includes:  
+
+- **Overview & Dataset** – Background on the IBM HR Analytics dataset and study scope.  
+- **Data Limitations** – Notes on dataset constraints and interpretation.  
+- **Executive Summary** – Business problem, goals, and key findings.  
+- **Key Findings** – Attrition insights by different segments.
+- **Recommendations** – Targeted HR actions to reduce turnover.  
+- **Impact Summary Table** – Quantified avoided departures and cost savings.  
+- **Clarification of Totals** – Overlap adjustment and half-gap methodology.  
+- **Overall Financial Impact** – Adjusted savings and realistic outcomes.  
+- **Appendix & Conclusion** – Formulas, examples, and strategic takeaways.  
 
 ---
 
