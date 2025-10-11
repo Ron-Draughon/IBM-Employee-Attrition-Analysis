@@ -26,5 +26,5 @@ This report includes:
 ---
 
 ## 🔗 Direct Access
-👉 [Click here to view the report a PDF] [IBM Employee Attrition Report.pdf](https://drive.google.com/file/d/161gTjxzshdm_rXk8SGpLgg9n13Oo1f-l/view?usp=drive_link
+👉 [Click here to view the report a PDF] [IBM Employee Attrition Report.pdf](https://drive.google.com/file/d/1OlXlNLpO9Q77EnMdQJ5CjtWysPjGpr-o/view?usp=drive_link
 )
